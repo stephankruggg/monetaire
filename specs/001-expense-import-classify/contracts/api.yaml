@@ -1,0 +1,765 @@
+openapi: 3.0.3
+info:
+  title: Monetaire Expense Management API
+  description: API for importing, classifying, and managing personal finance expenses
+  version: 1.0.0
+  contact:
+    name: Monetaire Development
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+tags:
+  - name: Expenses
+    description: Expense management operations
+  - name: Categories
+    description: Category management operations
+  - name: Import
+    description: CSV import operations
+  - name: Classification
+    description: Expense classification operations
+
+paths:
+  /expenses:
+    get:
+      summary: List all expenses
+      description: Retrieve all expenses with optional filtering and sorting
+      tags: [Expenses]
+      parameters:
+        - name: startDate
+          in: query
+          description: Filter expenses from this date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+          example: "2025-10-01"
+        - name: endDate
+          in: query
+          description: Filter expenses until this date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+          example: "2025-10-31"
+        - name: categoryId
+          in: query
+          description: Filter by category ID
+          schema:
+            type: integer
+          example: 1
+        - name: vendor
+          in: query
+          description: Filter by vendor name (partial match)
+          schema:
+            type: string
+          example: "Amazon"
+        - name: paymentType
+          in: query
+          description: Filter by payment type
+          schema:
+            type: string
+            enum: [credit, debit, pix, cash, other]
+          example: "credit"
+        - name: sortBy
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum: [date, amount, vendor_name, category]
+            default: date
+          example: "date"
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          example: "desc"
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Expense'
+                  total:
+                    type: integer
+                    description: Total number of expenses
+                    example: 42
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      summary: Create manual expense
+      description: Add a new expense manually (not from CSV import)
+      tags: [Expenses]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseRequest'
+      responses:
+        '201':
+          description: Expense created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /expenses/{id}:
+    get:
+      summary: Get expense by ID
+      description: Retrieve a single expense
+      tags: [Expenses]
+      parameters:
+        - $ref: '#/components/parameters/ExpenseId'
+      responses:
+        '200':
+          description: Expense details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      summary: Update expense
+      description: Update expense fields (custom name, category, etc.)
+      tags: [Expenses]
+      parameters:
+        - $ref: '#/components/parameters/ExpenseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpenseRequest'
+      responses:
+        '200':
+          description: Expense updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      summary: Delete expense
+      description: Remove an expense from the system
+      tags: [Expenses]
+      parameters:
+        - $ref: '#/components/parameters/ExpenseId'
+      responses:
+        '204':
+          description: Expense deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /expenses/{id}/reclassify:
+    post:
+      summary: Reclassify expense
+      description: Manually change expense category and record in reclassification history
+      tags: [Classification]
+      parameters:
+        - $ref: '#/components/parameters/ExpenseId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - categoryId
+              properties:
+                categoryId:
+                  type: integer
+                  description: New category ID
+                  example: 3
+                reason:
+                  type: string
+                  description: Optional reason for reclassification
+                  example: "This is actually a hobby expense, not food"
+      responses:
+        '200':
+          description: Expense reclassified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /import/csv:
+    post:
+      summary: Import expenses from CSV
+      description: Upload and process Nubank CSV file
+      tags: [Import]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file (Nubank format)
+      responses:
+        '200':
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          description: File too large (max 10MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /import/sessions:
+    get:
+      summary: List import sessions
+      description: Retrieve history of CSV imports
+      tags: [Import]
+      parameters:
+        - name: limit
+          in: query
+          description: Max number of sessions to return
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          example: 10
+      responses:
+        '200':
+          description: List of import sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImportSession'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /categories:
+    get:
+      summary: List all categories
+      description: Retrieve all active categories
+      tags: [Categories]
+      parameters:
+        - name: includeInactive
+          in: query
+          description: Include archived categories
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      summary: Create custom category
+      description: Add a new user-defined category
+      tags: [Categories]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  example: "Gifts"
+                description:
+                  type: string
+                  maxLength: 200
+                  example: "Gifts for friends and family"
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Category name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /categories/{id}:
+    patch:
+      summary: Update category
+      description: Update category details (name, description, active status)
+      tags: [Categories]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Category ID
+          schema:
+            type: integer
+          example: 5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                description:
+                  type: string
+                  maxLength: 200
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Category name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /classification/classify:
+    post:
+      summary: Classify expense (AI-assisted)
+      description: Send expense to AI classification service (Ollama)
+      tags: [Classification]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expenseId
+              properties:
+                expenseId:
+                  type: integer
+                  description: Expense ID to classify
+                  example: 123
+      responses:
+        '200':
+          description: Classification completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenseId:
+                    type: integer
+                    example: 123
+                  suggestedCategoryId:
+                    type: integer
+                    example: 2
+                  confidence:
+                    type: number
+                    format: float
+                    minimum: 0
+                    maximum: 1
+                    example: 0.85
+                  method:
+                    type: string
+                    enum: [deterministic, ai, fallback]
+                    example: "ai"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          description: AI service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /classification/vendor-history/{vendorName}:
+    get:
+      summary: Get vendor classification history
+      description: Retrieve classification history for a vendor
+      tags: [Classification]
+      parameters:
+        - name: vendorName
+          in: path
+          required: true
+          description: Vendor name
+          schema:
+            type: string
+          example: "Amazon"
+      responses:
+        '200':
+          description: Vendor history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorHistory'
+        '404':
+          description: Vendor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    ExpenseId:
+      name: id
+      in: path
+      required: true
+      description: Expense ID
+      schema:
+        type: integer
+      example: 123
+
+  schemas:
+    Expense:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        date:
+          type: string
+          format: date
+          description: Transaction date (YYYY-MM-DD)
+          example: "2025-10-15"
+        customName:
+          type: string
+          nullable: true
+          description: User-assigned meaningful name
+          example: "New Laptop"
+        originalTitle:
+          type: string
+          description: Original description from bank or user input
+          example: "Amazon Marketplace - Parcela 2/10"
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+          description: Amount in Brazilian Reais
+          example: 156.78
+        paymentType:
+          type: string
+          enum: [credit, debit, pix, cash, other]
+          example: "credit"
+        source:
+          type: string
+          enum: [imported, manual]
+          example: "imported"
+        vendorName:
+          type: string
+          description: Extracted vendor/merchant name
+          example: "Amazon"
+        category:
+          $ref: '#/components/schemas/Category'
+          nullable: true
+        installmentCurrent:
+          type: integer
+          nullable: true
+          description: Current installment number
+          example: 2
+        installmentTotal:
+          type: integer
+          nullable: true
+          description: Total installments
+          example: 10
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-15T11:45:00Z"
+
+    CreateExpenseRequest:
+      type: object
+      required:
+        - date
+        - title
+        - amount
+        - paymentType
+      properties:
+        date:
+          type: string
+          format: date
+          description: Transaction date (YYYY-MM-DD)
+          example: "2025-10-20"
+        title:
+          type: string
+          minLength: 1
+          description: Expense description
+          example: "PIX transfer to João Silva"
+        customName:
+          type: string
+          description: Optional custom name
+          example: "Rent payment"
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+          description: Amount in Brazilian Reais
+          example: 1200.00
+        paymentType:
+          type: string
+          enum: [credit, debit, pix, cash, other]
+          example: "pix"
+        categoryId:
+          type: integer
+          nullable: true
+          description: Optional category ID (can classify later)
+          example: 5
+
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        customName:
+          type: string
+          description: Update custom name
+          example: "Laptop for work"
+        categoryId:
+          type: integer
+          description: Update category
+          example: 4
+        date:
+          type: string
+          format: date
+          description: Update transaction date
+          example: "2025-10-16"
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 2
+        name:
+          type: string
+          example: "Food"
+        description:
+          type: string
+          nullable: true
+          example: "Food and dining expenses"
+        isUserDefined:
+          type: boolean
+          description: True if user-created, false if predefined
+          example: false
+        isActive:
+          type: boolean
+          description: True if active, false if archived
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-15T00:00:00Z"
+
+    ImportSession:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        filename:
+          type: string
+          example: "nubank_october_2025.csv"
+        importDate:
+          type: string
+          format: date-time
+          example: "2025-11-15T14:22:00Z"
+        expensesImported:
+          type: integer
+          description: Number of successfully imported expenses
+          example: 42
+        expensesFailed:
+          type: integer
+          description: Number of failed rows
+          example: 2
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          example: 10
+        year:
+          type: integer
+          example: 2025
+
+    ImportResult:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          description: Import session ID
+          example: 6
+        imported:
+          type: integer
+          description: Number of expenses imported
+          example: 38
+        failed:
+          type: integer
+          description: Number of rows that failed validation
+          example: 1
+        errors:
+          type: array
+          description: List of errors for failed rows
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+                description: CSV row number (1-indexed)
+                example: 15
+              error:
+                type: string
+                description: Error message
+                example: "Invalid date format"
+        classificationSummary:
+          type: object
+          properties:
+            deterministic:
+              type: integer
+              description: Expenses classified by deterministic rules
+              example: 25
+            ai:
+              type: integer
+              description: Expenses classified by AI
+              example: 10
+            uncategorized:
+              type: integer
+              description: Expenses not yet classified
+              example: 3
+
+    VendorHistory:
+      type: object
+      properties:
+        vendorName:
+          type: string
+          example: "Amazon"
+        isGeneral:
+          type: boolean
+          description: True if vendor has multiple categories
+          example: true
+        categoryCounts:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Map of category names to counts
+          example:
+            "Food": 3
+            "Hobbies": 5
+            "Library": 8
+        lastUpdated:
+          type: string
+          format: date-time
+          example: "2025-11-15T12:00:00Z"
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid request"
+        details:
+          type: string
+          description: Additional error details
+          example: "The 'amount' field must be a positive number"
+
+  responses:
+    BadRequest:
+      description: Bad request (validation error)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

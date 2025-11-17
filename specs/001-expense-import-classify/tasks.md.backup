@@ -1,0 +1,503 @@
+# Tasks: Credit Card Expense Import and Classification
+
+**Input**: Design documents from `/specs/001-expense-import-classify/`
+**Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/
+
+**Tests**: Following TDD approach as specified in the constitution - tests written FIRST, then implementation.
+
+**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+
+**User Feedback Incorporated**:
+- ✅ Month-based filtering: Expenses displayed per selected month (IMPLEMENTED)
+- ✅ Month selector UI: User can pick month to view/import (IMPLEMENTED)
+- ✅ Test data cleared: No placeholder expenses on fresh install (IMPLEMENTED)
+- ✅ Billing cycle tracking: Display which credit card statement ("fatura") each expense belongs to (IMPLEMENTED)
+- ✅ Import session display: Show which month expenses were imported to in the UI (IMPLEMENTED)
+- **NEW**: Multi-month billing cycle display: Show all months covered by billing cycle (e.g., "Sep 12 - Oct 11") regardless of current view
+- **NEW**: Duplicate import detection: Confirm before overwriting when same filename is imported again
+- Classification priority: User Story 3 (classification) AFTER User Story 2 (custom naming helps classification)
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel (different files, no dependencies)
+- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
+- Include exact file paths in descriptions
+
+## Path Conventions
+
+Web application structure (frontend + backend):
+- **Backend**: `backend/src/`, `backend/tests/`
+- **Frontend**: `frontend/src/`, `frontend/tests/`
+- **Shared**: `shared/types/`
+
+---
+
+## ✅ Phase 1: Setup - COMPLETED
+
+All setup tasks have been completed:
+- [X] T001-T014: Project initialization, dependencies, TypeScript configuration
+- [X] T015-T029: Database setup, migrations, Express app, testing infrastructure
+
+**Checkpoint**: Foundation ready - all infrastructure in place
+
+---
+
+## ✅ Phase 2: Foundational - COMPLETED
+
+All foundational tasks have been completed:
+- [X] T030-T052: CSV import API, expense listing API, repositories, services
+- [X] T053-T061: Frontend components, API client, file upload, expense table
+
+**Checkpoint**: MVP functional - CSV import and expense viewing works
+
+---
+
+## ✅ Phase 3: User Story 1 - Month-Based Filtering (Priority: P1) - COMPLETED
+
+**Goal**: Expenses filtered by month with month selector UI
+
+All tasks completed:
+- [X] T062-T073: Month filtering, MonthSelector component, test data cleanup
+
+**Checkpoint**: Expenses correctly filtered by month, test data removed, month selector working ✅
+
+---
+
+## Phase 4: User Story 1 Enhancements - Billing Cycle & Import Tracking (Priority: P1)
+
+**Goal**: Track and display billing cycle information and import session metadata
+
+**Current User Need**:
+- Credit card billing cycle closes on 11th of month (configurable)
+- Expenses from Sept 12-Oct 11 all belong to October billing cycle ("fatura de outubro")
+- Need to see which billing cycle each expense belongs to (separate from transaction date)
+- Need to see which month/year expenses were originally imported to
+
+**Independent Test**: Import October CSV with expenses from Sept 15 to Oct 10, verify billing cycle column shows correct statement month for each expense
+
+### Database & Backend
+
+- [ ] T074 [P] [US1] Add billing_cycle_month and billing_cycle_year columns to expenses table in new migration backend/src/db/migrations/[timestamp]_add_billing_cycle.ts
+- [ ] T075 [P] [US1] Add billing_cycle_close_day column to import_sessions table (default 11) in same migration
+- [ ] T076 [P] [US1] Create BillingCycleService in backend/src/services/BillingCycleService.ts
+- [ ] T077 [US1] Implement calculateBillingCycle(transactionDate, closeDayof Month) method in BillingCycleService
+- [ ] T078 [US1] Update ImportService to calculate and store billing cycle for each expense in backend/src/services/ImportService.ts
+- [ ] T079 [US1] Update ExpenseRepository to include billing cycle fields in queries in backend/src/models/ExpenseRepository.ts
+- [ ] T080 [P] [US1] Add unit tests for billing cycle calculation in backend/tests/unit/BillingCycleService.test.ts
+- [ ] T081 [P] [US1] Update integration tests to verify billing cycle assignment in backend/tests/integration/csv-import.test.ts
+
+### Type Definitions
+
+- [ ] T082 [P] [US1] Add billing_cycle_month, billing_cycle_year to Expense type in shared/types/index.ts
+- [ ] T083 [P] [US1] Add billing_cycle_close_day to ImportSession type in shared/types/index.ts
+
+### Frontend - Billing Cycle Display
+
+- [X] T084 [P] [US1] Add "Billing Cycle" column to ExpenseTable in frontend/src/components/ExpenseTable.tsx
+- [X] T085 [P] [US1] Format billing cycle display (e.g., "Oct 2025 Statement") in frontend/src/components/ExpenseRow.tsx
+- [X] T086 [US1] Add sorting by billing cycle to ExpenseTable in frontend/src/components/ExpenseTable.tsx
+
+### Frontend - Import Session Metadata
+
+- [X] T087 [P] [US1] Create ImportSessionInfo component in frontend/src/components/ImportSessionInfo.tsx
+- [X] T088 [US1] Add import session metadata display to ExpensesPage (show "Imported to: Nov 2025" for selected month) in frontend/src/pages/ExpensesPage.tsx
+- [X] T089 [US1] Fetch import session data via API in frontend/src/services/expenseApi.ts
+
+### API Enhancements
+
+- [X] T090 [P] [US1] Add GET /api/import-sessions endpoint in backend/src/api/controllers/ImportController.ts
+- [X] T091 [P] [US1] Add import session routes in backend/src/api/routes/import.ts
+- [X] T092 [US1] Include import session info in GET /api/expenses response in backend/src/api/controllers/ExpensesController.ts
+
+### Testing & Validation
+
+- [ ] T093 [US1] Test: Import CSV with expenses spanning two statement periods, verify correct billing cycle assignment
+- [ ] T094 [US1] Test: Verify expenses from Sept 12-Oct 11 all show "Oct 2025 Statement"
+- [ ] T095 [US1] Test: Verify expenses can be sorted by billing cycle independently of transaction date
+- [ ] T096 [US1] Test: Verify import session metadata shows correct import month
+
+### Enhanced Import Session Display
+
+- [ ] T097 [P] [US1] Update ImportSessionInfo component to show all months covered by billing cycle in frontend/src/components/ImportSessionInfo.tsx
+- [ ] T098 [US1] Add helper to calculate month range from billing cycle dates in frontend/src/components/ImportSessionInfo.tsx
+- [ ] T099 [US1] Display message like "Covers expenses from Sep 12 - Oct 11" in ImportSessionInfo component
+
+### Duplicate Import Detection & Confirmation
+
+- [ ] T100 [P] [US1] Add checkDuplicateImport method to ImportSessionRepository to detect existing imports by filename in backend/src/models/ImportSessionRepository.ts
+- [ ] T101 [US1] Update uploadCSV endpoint to check for duplicates before processing in backend/src/api/controllers/ImportController.ts
+- [ ] T102 [US1] Return duplicate detection response with existing session info from uploadCSV endpoint
+- [ ] T103 [P] [US1] Create ConfirmOverwriteModal component in frontend/src/components/ConfirmOverwriteModal.tsx
+- [ ] T104 [US1] Update FileUpload component to handle duplicate detection response in frontend/src/components/FileUpload.tsx
+- [ ] T105 [US1] Show ConfirmOverwriteModal when duplicate detected, allow user to confirm or cancel
+- [ ] T106 [P] [US1] Add DELETE /api/import/:sessionId endpoint to remove old import session in backend/src/api/controllers/ImportController.ts
+- [ ] T107 [US1] Update ImportService to support overwriting existing imports (delete old + create new) in backend/src/services/ImportService.ts
+- [ ] T108 [US1] Add route for DELETE /api/import/:sessionId in backend/src/api/routes/import.ts
+- [ ] T109 [US1] Implement overwrite flow: delete old session, re-import expenses on user confirmation
+- [ ] T110 [US1] Test: Import same file twice, verify confirmation modal appears
+- [ ] T111 [US1] Test: Confirm overwrite, verify old expenses are replaced with new ones
+- [ ] T112 [US1] Test: Cancel overwrite, verify no changes occur and old data remains
+
+**Checkpoint**: Billing cycle tracking complete, users can see which statement each expense belongs to
+
+---
+
+## Phase 4.5: Bug Fixes & Critical UX Improvements (Priority: P1 - URGENT)
+
+**Goal**: Fix bugs and implement critical missing features for import session management and expense deletion
+
+**User Feedback**:
+- Import session info should only show AFTER import (not persist between reloads), and be closeable
+- Second/subsequent duplicate imports not showing confirmation modal (bug)
+- Need button to clear/delete entire statement with all expenses
+- Need ability to delete individual expenses from table rows
+- Deleted expenses should not be used for future AI learning
+
+**Independent Test**: Import CSV, verify session info appears with close button, close it, reload page, verify it's gone. Import same CSV twice, verify modal appears both times. Delete an expense, verify it's removed and not used in future classifications.
+
+### Import Session Info - Transient Display
+
+- [ ] T113 [P] [US1] Convert ImportSessionInfo to transient state (only show after import, not on page load) in frontend/src/pages/ExpensesPage.tsx
+- [ ] T114 [P] [US1] Add close button to ImportSessionInfo component in frontend/src/components/ImportSessionInfo.tsx
+- [ ] T115 [US1] Remove loadImportSession() call from onMount in frontend/src/pages/ExpensesPage.tsx
+- [ ] T116 [US1] Ensure session info only appears when onImportComplete is triggered in frontend/src/pages/ExpensesPage.tsx
+- [ ] T117 [US1] Test: Import CSV, verify session info appears. Close it, verify it's hidden. Reload page, verify it doesn't appear.
+
+### Duplicate Import Modal Bug Fix
+
+- [ ] T118 [P] [US1] Debug and fix duplicate import detection not triggering on second+ imports in frontend/src/components/FileUpload.tsx
+- [ ] T119 [US1] Add console logging to track duplicate detection flow in frontend/src/components/FileUpload.tsx
+- [ ] T120 [US1] Ensure pendingFile and duplicateSession state reset properly after overwrite in frontend/src/components/FileUpload.tsx
+- [ ] T121 [US1] Test: Import same file 3 times consecutively, verify modal appears each time with correct session info
+
+### Delete Entire Import Session/Statement
+
+- [ ] T122 [P] [US1] Add "Delete Statement" button to ImportSessionInfo component in frontend/src/components/ImportSessionInfo.tsx
+- [ ] T123 [P] [US1] Create DeleteStatementModal confirmation component in frontend/src/components/DeleteStatementModal.tsx
+- [ ] T124 [US1] Add deleteImportSession API call to frontend (already exists in backend from T106)
+- [ ] T125 [US1] Implement delete statement flow: show confirmation, delete session + expenses, refresh table in frontend/src/pages/ExpensesPage.tsx
+- [ ] T126 [US1] Test: Delete statement, verify all expenses removed and session deleted
+
+### Delete Individual Expenses
+
+- [ ] T127 [P] [US1] Add is_deleted column (BOOLEAN) to expenses table in backend/src/db/migrations/
+- [ ] T128 [P] [US1] Update ExpenseRepository to support soft delete (mark is_deleted = true) in backend/src/models/ExpenseRepository.ts
+- [ ] T129 [P] [US1] Add DELETE /api/expenses/:id endpoint in backend/src/api/controllers/ExpensesController.ts
+- [ ] T130 [P] [US1] Add route for DELETE /api/expenses/:id in backend/src/api/routes/expenses.ts
+- [ ] T131 [P] [US1] Update GET /api/expenses to filter out deleted expenses (WHERE is_deleted = false) in backend/src/api/controllers/ExpensesController.ts
+- [ ] T132 [P] [US1] Add delete button to ExpenseRow component in frontend/src/components/ExpenseRow.tsx
+- [ ] T133 [P] [US1] Create DeleteExpenseModal confirmation component in frontend/src/components/DeleteExpenseModal.tsx
+- [ ] T134 [US1] Add deleteExpense API call to expenseApi.ts in frontend/src/services/expenseApi.ts
+- [ ] T135 [US1] Implement delete expense flow: show confirmation, call API, refresh table in frontend/src/components/ExpenseRow.tsx
+- [ ] T136 [US1] Test: Delete individual expense, verify removed from table. Refresh page, verify still gone.
+
+### Exclude Deleted Expenses from Learning
+
+- [ ] T137 [P] [US1] Update VendorHistoryService to exclude deleted expenses when building vendor history in backend/src/services/VendorHistoryService.ts
+- [ ] T138 [P] [US1] Update ClassificationService to exclude deleted expenses from AI context in backend/src/services/ClassificationService.ts
+- [ ] T139 [US1] Update any queries that build learning data to add WHERE is_deleted = false filter
+- [ ] T140 [US1] Test: Delete an expense, import similar expense, verify deleted expense not used in classification
+
+**Checkpoint**: Import session UI is transient and closeable, duplicate detection works consistently, users can delete statements and individual expenses
+
+---
+
+## Phase 5: User Story 2 - Assign Meaningful Names to Expenses (Priority: P2)
+
+**Goal**: Users can assign custom names to expenses, system remembers names for recurring charges
+
+**Why This Priority**: Custom naming helps classification (User Story 3) by providing better context
+
+**Independent Test**: Assign custom name to "Amazon Parcela 2/10", verify next month's "Parcela 3/10" gets same name automatically
+
+### Database & Models
+
+- [ ] T097 [P] [US2] Create CustomNameRegistry table in backend/src/db/migrations/ (vendor_pattern, amount_pattern, installment_detected, custom_name)
+- [ ] T098 [P] [US2] Create CustomNameRegistryRepository in backend/src/models/CustomNameRegistryRepository.ts
+- [ ] T099 [P] [US2] Create installment pattern detector in backend/src/utils/installment-detector.ts (extract vendor, current, total from title)
+
+### Naming Logic
+
+- [ ] T100 [US2] Create custom name matching service in backend/src/services/CustomNameService.ts (match by vendor+installment pattern)
+- [ ] T101 [US2] Integrate custom name lookup into ImportService (check registry during import)
+- [ ] T102 [US2] Add custom name saving logic to CustomNameService (save vendor pattern + installment info)
+
+### API Endpoints
+
+- [ ] T103 [P] [US2] Update PATCH /api/expenses/:id to accept customName in backend/src/api/controllers/ExpensesController.ts
+- [ ] T104 [P] [US2] Update expenses routes to include PATCH endpoint in backend/src/api/routes/expenses.ts
+- [ ] T105 [US2] Add updateExpenseName function to expenseApi.ts in frontend/src/services/expenseApi.ts
+
+### Frontend - Custom Naming UI
+
+- [ ] T106 [P] [US2] Create InlineEdit component for custom name editing in frontend/src/components/InlineEdit.tsx
+- [ ] T107 [US2] Add inline edit to ExpenseRow for customName field in frontend/src/components/ExpenseRow.tsx
+- [ ] T108 [US2] Wire inline edit to API in ExpensesPage in frontend/src/pages/ExpensesPage.tsx
+- [ ] T109 [US2] Show original title below custom name when different in frontend/src/components/ExpenseRow.tsx
+
+### Testing & Validation
+
+- [ ] T110 [US2] Test: Assign custom name to installment expense, verify saved
+- [ ] T111 [US2] Test: Import next installment, verify auto-assigned custom name
+- [ ] T112 [US2] Test: Assign name to non-installment, import similar vendor with different amount, verify no auto-name
+- [ ] T113 [US2] Add conflict resolution: if multiple matches, don't auto-assign name
+
+**Checkpoint**: Users can assign custom names, system auto-assigns names to matching installments
+
+---
+
+## Phase 6: User Story 3 - Automatic Expense Classification (Priority: P3)
+
+**Goal**: Automatically classify expenses into categories using deterministic rules and AI
+
+**Why After US2**: Custom names provide better context for classification
+
+**Independent Test**: Import expenses, verify known vendors get deterministic categories, new vendors get AI suggestions
+
+### Database & Models
+
+- [ ] T114 [P] [US3] Add classification_rule_type column to expenses table in backend/src/db/migrations/
+- [ ] T115 [P] [US3] Create ReclassificationHistory table in backend/src/db/migrations/
+- [ ] T116 [P] [US3] Create VendorCategoryMapping table in backend/src/db/migrations/
+- [ ] T117 [P] [US3] Create VendorCategoryMappingRepository in backend/src/models/VendorCategoryMappingRepository.ts
+- [ ] T118 [P] [US3] Create ReclassificationHistoryRepository in backend/src/models/ReclassificationHistoryRepository.ts
+
+### Classification Logic
+
+- [ ] T119 [P] [US3] Create ClassificationRule enum in shared/types/index.ts (DETERMINISTIC, INSTALLMENT_MATCH, AI_SUGGESTED, MANUAL_OVERRIDE)
+- [ ] T120 [P] [US3] Create vendor normalization utility in backend/src/utils/vendor-normalizer.ts (lowercase, remove special chars)
+- [ ] T121 [US3] Create deterministic classifier in backend/src/services/ClassificationService.ts (check VendorCategoryMapping)
+- [ ] T122 [US3] Add installment matching logic to ClassificationService (if expense.installmentCurrent > 1, find previous installment category)
+- [ ] T123 [US3] Create Ollama AI client in backend/src/services/OllamaService.ts (POST localhost:11434/api/generate)
+- [ ] T124 [US3] Create AI classifier in ClassificationService (only if deterministic fails)
+- [ ] T125 [US3] Integrate classification into ImportService (classify during import)
+- [ ] T126 [P] [US3] Update expenseRepository.create() to save classification_rule_type in backend/src/models/ExpenseRepository.ts
+
+### API Endpoints
+
+- [ ] T127 [P] [US3] Create POST /api/expenses/:id/reclassify endpoint in backend/src/api/controllers/ExpensesController.ts
+- [ ] T128 [P] [US3] Update expenses routes to include reclassify endpoint in backend/src/api/routes/expenses.ts
+- [ ] T129 [US3] Add reclassify function to expenseApi.ts in frontend/src/services/expenseApi.ts
+
+### Frontend - Classification Display & Override
+
+- [ ] T130 [P] [US3] Add classification indicator to CategoryTag component in frontend/src/components/CategoryTag.tsx (show icon for AI vs deterministic)
+- [ ] T131 [US3] Create CategoryDropdown component for reclassification in frontend/src/components/CategoryDropdown.tsx
+- [ ] T132 [US3] Add reclassify handler to ExpenseRow in frontend/src/components/ExpenseRow.tsx
+- [ ] T133 [US3] Wire reclassify to API in ExpensesPage in frontend/src/pages/ExpensesPage.tsx
+
+### Testing & Validation
+
+- [ ] T134 [US3] Test: Import known vendor expense (e.g., Subway), verify deterministic classification
+- [ ] T135 [US3] Test: Import new vendor, verify AI classification (requires Ollama running)
+- [ ] T136 [US3] Test: Import installment 2/3, verify it gets same category as 1/3
+- [ ] T137 [US3] Test: Reclassify expense, verify vendor mapping updated, future expenses use new category
+- [ ] T138 [US3] Add error handling for Ollama connection failures in backend/src/services/OllamaService.ts
+- [ ] T139 [US3] Add fallback category "Uncategorized" when AI fails in backend/src/services/ClassificationService.ts
+
+**Checkpoint**: Expenses automatically classified during import, users can override classifications, system learns from corrections
+
+---
+
+## Phase 7: User Story 4 - Manual Expense Entry (Priority: P4)
+
+**Goal**: Users can manually add expenses not captured by credit card (PIX, cash, debit)
+
+**Independent Test**: Create manual expense with PIX payment type, verify it appears in table with correct tags and billing cycle
+
+### API Endpoints
+
+- [ ] T140 [P] [US4] Implement POST /api/expenses for manual entry in backend/src/api/controllers/ExpensesController.ts
+- [ ] T141 [P] [US4] Add createExpense function to expenseApi.ts in frontend/src/services/expenseApi.ts
+
+### Frontend - Manual Entry Form
+
+- [ ] T142 [P] [US4] Create ManualExpenseForm component in frontend/src/components/ManualExpenseForm.tsx
+- [ ] T143 [US4] Add form fields: date, customName, amount, paymentType (dropdown), category (dropdown) in frontend/src/components/ManualExpenseForm.tsx
+- [ ] T144 [US4] Calculate billing cycle for manually entered expenses in frontend/src/components/ManualExpenseForm.tsx
+- [ ] T145 [US4] Add "Add Expense" button to ExpensesPage in frontend/src/pages/ExpensesPage.tsx
+- [ ] T146 [US4] Wire form submission to API in ExpensesPage in frontend/src/pages/ExpensesPage.tsx
+- [ ] T147 [US4] Refresh expense list after manual entry in frontend/src/pages/ExpensesPage.tsx
+
+### Validation & Polish
+
+- [ ] T148 [US4] Add form validation (date format, amount numeric, required fields) in frontend/src/components/ManualExpenseForm.tsx
+- [ ] T149 [US4] Add success/error toast notifications in frontend/src/pages/ExpensesPage.tsx
+- [ ] T150 [US4] Test: Create manual PIX expense, verify appears in correct month with PIX tag and correct billing cycle
+- [ ] T151 [US4] Test: Create manual expense with category, verify classification rule is MANUAL_OVERRIDE
+
+**Checkpoint**: Users can manually add expenses for any payment type with automatic billing cycle calculation
+
+---
+
+## Phase 8: User Story 5 - Enhanced Payment Type Tagging (Priority: P5)
+
+**Goal**: Enhanced visual distinction for payment types in the table
+
+**Note**: Basic payment type tags already exist from Phase 2. This phase adds enhancements.
+
+**Independent Test**: View mixed expense list (imported credit, manual PIX, manual cash), verify tags are visually distinct
+
+### Frontend Enhancements
+
+- [ ] T152 [P] [US5] Add payment type filter to ExpenseTable in frontend/src/components/ExpenseTable.tsx
+- [ ] T153 [P] [US5] Add payment type icons to PaymentTypeTag in frontend/src/components/PaymentTypeTag.tsx
+- [ ] T154 [US5] Add payment type counts to MonthSelector in frontend/src/components/MonthSelector.tsx (e.g., "Nov 2025 (45 credit, 5 PIX)")
+- [ ] T155 [US5] Test: Filter by payment type, verify correct expenses shown
+
+**Checkpoint**: Payment types visually distinct, filterable, summarized per month
+
+---
+
+## Phase 9: Polish & Cross-Cutting Concerns
+
+**Goal**: Performance optimization, error handling, documentation
+
+### Backend Polish
+
+- [ ] T156 [P] Add database indexes (vendor_name, date, category_id, billing_cycle_month) in backend/src/db/migrations/
+- [ ] T157 [P] Add request logging middleware in backend/src/middleware/logger.ts
+- [ ] T158 [P] Add rate limiting for AI classification (max 10 concurrent) in backend/src/services/ClassificationService.ts
+- [ ] T159 Add comprehensive error handling for all controllers in backend/src/api/controllers/
+
+### Frontend Polish
+
+- [ ] T160 [P] Add expense count and total amount summary to ExpenseTable footer in frontend/src/components/ExpenseTable.tsx
+- [ ] T161 [P] Add keyboard shortcuts (arrow keys for month nav, Enter to import) in frontend/src/pages/ExpensesPage.tsx
+- [ ] T162 [P] Add expense detail modal (click row to see full details) in frontend/src/components/ExpenseDetailModal.tsx
+- [ ] T163 Add loading skeleton for expense table in frontend/src/components/ExpenseTable.tsx
+
+### Testing & Documentation
+
+- [ ] T164 [P] Write end-to-end test: Full user journey (import CSV, classify, name, override, manual entry) in backend/tests/e2e/
+- [ ] T165 [P] Create user guide in docs/USER_GUIDE.md (how to import, classify, override, understand billing cycles)
+- [ ] T166 [P] Create developer guide in docs/DEVELOPER_GUIDE.md (architecture, adding categories, extending classification)
+- [ ] T167 Run all tests, verify 100% pass rate
+- [ ] T168 Performance test: Import 100 expenses, verify <5s total time
+- [ ] T169 Performance test: Classify 50 new vendors with AI, verify <3s per expense
+
+**Checkpoint**: Production-ready application with all user stories complete
+
+---
+
+## Dependencies & Execution Order
+
+### User Story Dependency Graph
+
+```
+Phase 1 (Setup) ──► Phase 2 (Foundation) ──► Phase 3 (US1 Month Filter) ✅
+                                                       │
+                                                       ▼
+                                              Phase 4 (US1 Billing Cycle) ⏳
+                                                       │
+                                                       ├──► Phase 5 (US2 - Naming)
+                                                       │         │
+                                                       │         ▼
+                                                       │    Phase 6 (US3 - Classification)
+                                                       │         │
+                                                       │         ├──► Phase 7 (US4 - Manual Entry)
+                                                       │         │
+                                                       │         └──► Phase 8 (US5 - Enhanced Tags)
+                                                       │
+                                                       └──────────► Phase 9 (Polish)
+```
+
+### Key Dependencies
+
+- **Phase 4 BEFORE Phase 5**: Billing cycle tracking should be complete before naming
+- **Phase 5 BEFORE Phase 6**: Custom names improve classification accuracy
+- **Phase 6 BEFORE Phase 7**: Classification should work before manual entry (manual entries need categories)
+- **Phases 7-8 are independent**: Can be done in any order after Phase 6
+
+### Parallel Opportunities
+
+**Within Phase 4 (Billing Cycle)**:
+- T074-T076, T080-T081, T082-T083 can run in parallel (migrations, tests, types)
+- T084-T086, T087-T089 can run in parallel (frontend components)
+- T090-T091 can run in parallel (API endpoints)
+
+**Within Phase 5 (Custom Naming)**:
+- T097-T099 can run in parallel (database and utilities)
+- T103-T105 can run in parallel (API routes)
+- T106, T109 can run in parallel (frontend components)
+
+**Within Phase 6 (Classification)**:
+- T114-T118 can run in parallel (database migrations and repositories)
+- T119-T120 can run in parallel (type definitions and utilities)
+- T127-T129 can run in parallel (API routes)
+- T130-T132 can run in parallel (frontend components)
+
+**Within Phase 7 (Manual Entry)**:
+- T140-T141 can run in parallel (API endpoints and frontend API client)
+- T142-T144 can run in parallel (form component development)
+
+**Within Phase 9 (Polish)**:
+- T156-T159 can run in parallel (backend improvements)
+- T160-T163 can run in parallel (frontend improvements)
+- T164-T166 can run in parallel (documentation)
+
+---
+
+## Implementation Strategy
+
+### Current Status
+
+- ✅ Phase 1-2: Complete
+- ✅ Phase 3: Complete (Month filtering working)
+- ⏳ Phase 4: Ready to start (Billing cycle tracking - IMMEDIATE PRIORITY)
+
+### Immediate Next Steps (Phase 4)
+
+1. **Backend**: Add billing cycle columns and service (T074-T081)
+2. **Types**: Update Expense type with billing cycle fields (T082-T083)
+3. **Frontend**: Add billing cycle column to table (T084-T086)
+4. **Frontend**: Show import session metadata (T087-T089)
+5. **API**: Add import session endpoints (T090-T092)
+6. **Testing**: Verify billing cycle calculation (T093-T096)
+
+### Incremental Delivery Plan
+
+- **Sprint 1 (Current)**: Phase 4 complete (billing cycle tracking)
+- **Sprint 2**: Phase 5 complete (custom naming)
+- **Sprint 3**: Phase 6 complete (classification)
+- **Sprint 4**: Phase 7 + Phase 8 complete (manual entry + enhanced tags)
+- **Sprint 5**: Phase 9 complete (polish + documentation)
+
+### Task Completion Guidelines
+
+- Mark tasks with `[X]` when complete
+- Run tests after each phase
+- Update this file as tasks evolve
+- Add new tasks as needed with sequential IDs (T170, T171, etc.)
+
+---
+
+## Total Task Count: 119 tasks
+
+- Phase 1 (Setup): 14 tasks ✅ COMPLETE
+- Phase 2 (Foundation): 38 tasks ✅ COMPLETE
+- Phase 3 (US1 Month Filter): 12 tasks ✅ COMPLETE
+- **Phase 4 (US1 Billing Cycle)**: 23 tasks (T074-T096) ⏳ NEXT
+- Phase 5 (US2 Naming): 17 tasks (T097-T113)
+- Phase 6 (US3 Classification): 26 tasks (T114-T139)
+- Phase 7 (US4 Manual Entry): 12 tasks (T140-T151)
+- Phase 8 (US5 Enhanced Tags): 4 tasks (T152-T155)
+- Phase 9 (Polish): 14 tasks (T156-T169)
+
+**Current Status**: 64 tasks complete, 105 tasks remaining
+
+**Next Immediate Action**: Start T074 (Add billing_cycle columns to expenses table)
+
+---
+
+## Notes
+
+- [P] tasks = different files, no dependencies
+- [Story] label maps task to specific user story for traceability
+- Each user story should be independently completable and testable
+- TDD: Verify tests fail before implementing
+- **NEW**: Billing cycle tracking added per user feedback (credit card statement month)
+- **NEW**: Import session metadata display added per user feedback
+- Custom naming (US2) prioritized before classification (US3) to aid classification accuracy
+- Commit after each task or logical group
+- Stop at any checkpoint to validate story independently
