@@ -10,6 +10,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Security response headers to improve site isolation and general security
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Mitigate Spectre-like attacks by enabling cross-origin isolation where possible
+  // Note: `Cross-Origin-Embedder-Policy: require-corp` requires cross-origin resources
+  // to send appropriate CORP/CORS headers. If you host third-party assets, adjust accordingly.
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+
+  // Common security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', "interest-cohort=()" );
+
+  next();
+});
+
 // Health check
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
