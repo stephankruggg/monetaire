@@ -133,7 +133,9 @@ jobs:
       - name: Make workspace writable for ZAP
         run: |
           # Ensure the mounted workspace is writable by the ZAP docker container
-          sudo chmod -R a+rwx $GITHUB_WORKSPACE || true
+          # Create a dedicated folder for ZAP outputs and make it writable (safer than chmod -R)
+          mkdir -p $GITHUB_WORKSPACE/.zap-output
+          sudo chmod -R a+rwx $GITHUB_WORKSPACE/.zap-output || true
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
@@ -142,6 +144,10 @@ jobs:
           allow_issue_writing: false
           fail_action: false
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Use a hyphenated artifact name (some artifact APIs reject underscores)
+          artifact_name: 'zap-scan'
+          # Write reports into the workspace folder we created
+          zap_output_dir: '.zap-output'
 
   sbom-generation:
     name: Generate SBOM (Syft)
