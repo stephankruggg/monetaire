@@ -144,10 +144,17 @@ jobs:
           allow_issue_writing: false
           fail_action: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Use a hyphenated artifact name (some artifact APIs reject underscores)
-          artifact_name: 'zap-scan'
+          # Do NOT let the action attempt to upload artifacts itself (some runners reject names).
+          # We will upload the report files explicitly using `actions/upload-artifact` below.
+          upload_report: false
           # Write reports into the workspace folder we created
           zap_output_dir: '.zap-output'
+
+      - name: Upload ZAP reports as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-report
+          path: .zap-output/**
 
   sbom-generation:
     name: Generate SBOM (Syft)
