@@ -22,6 +22,7 @@ export interface ExpenseTable {
   installment_total: number | null;
   created_at: string;
   updated_at: string;
+  is_deleted: number;
 }
 
 export interface CategoryTable {
@@ -41,6 +42,7 @@ export interface ImportSessionTable {
   expenses_failed: number;
   month: number;
   year: number;
+  is_deleted?: number;
 }
 
 export interface Database {

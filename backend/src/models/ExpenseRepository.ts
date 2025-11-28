@@ -9,7 +9,7 @@ export interface CreateExpenseData {
   paymentType: 'credit' | 'debit' | 'pix' | 'cash' | 'other';
   source: 'imported' | 'manual';
   vendorName: string;
-  customName?: string;
+  customName?: string | null;
   categoryId?: number;
   importSessionId?: number;
   installmentCurrent?: number;
@@ -129,7 +129,8 @@ export class ExpenseRepository {
       .where('is_deleted', '=', 0) // Only delete non-deleted expenses
       .execute();
 
-    return Number(result.numUpdatedRows || 0);
+    const normalized = Array.isArray(result) ? result[0] : result;
+    return Number((normalized as any)?.numUpdatedRows ?? (normalized as any)?.numAffectedRows ?? 0);
   }
 
   async deleteByImportSession(sessionId: number): Promise<number> {
@@ -145,7 +146,7 @@ export class ExpenseRepository {
 
     // Extract the update result - Kysely returns an array with one UpdateResult object
     const updateResult = Array.isArray(result) ? result[0] : result;
-    return Number(updateResult?.numUpdatedRows ?? updateResult?.numAffectedRows ?? 0);
+    return Number((updateResult as any)?.numUpdatedRows ?? (updateResult as any)?.numAffectedRows ?? 0);
   }
 
   async findAll(filters?: {
