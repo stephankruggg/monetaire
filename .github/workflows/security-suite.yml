@@ -103,8 +103,6 @@ jobs:
             -Dsonar.projectKey=monetaire_v3
             -Dsonar.organization=monetaire-org
             -Dsonar.sources=backend/src,frontend/src
-            -Dsonar.tests=backend/tests,frontend/tests
-            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info
 
   dast-zap:
     name: DAST (OWASP ZAP)
