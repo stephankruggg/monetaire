@@ -117,6 +117,7 @@ jobs:
           npm install
           npm ci
           npm run build --if-present
+          npm run migrate:latest
           # Start backend in background
           npm start &
           echo "Waiting for Backend..."
