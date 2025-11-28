@@ -6,9 +6,9 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
-  pull-requests: read
+  contents: write
   security-events: write
+  pull-requests: write
 
 jobs:
   secret-scanning:
@@ -135,8 +135,6 @@ jobs:
         uses: zaproxy/action-baseline@v0.11.0
         with:
           target: 'http://localhost:5173'
-          rules_file_name: '.zap/rules.tsv'
-          cmd_options: '-a'
 
   sbom-generation:
     name: Generate SBOM (Syft)
