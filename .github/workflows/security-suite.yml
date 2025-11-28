@@ -94,15 +94,9 @@ jobs:
           fetch-depth: 0 # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: SonarQube Scan
-        uses: sonarsource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=monetaire_v3
-            -Dsonar.organization=monetaire-org
-            -Dsonar.sources=backend/src,frontend/src
 
   dast-zap:
     name: DAST (OWASP ZAP)
