@@ -111,22 +111,31 @@ jobs:
         with:
           node-version: '20'
 
-      # Setup and Run Application (Backend & Frontend)
       - name: Install and Start Backend
         run: |
           cd backend
+          npm install
           npm ci
           npm run build --if-present
           # Start backend in background
           npm start &
           echo "Waiting for Backend..."
-          sleep 15 
+          sleep 15
+      
+      - name: Install and Start Frontend
+        run: |
+          cd frontend
+          npm install
+          npm ci
+          npm run build --if-present
+          npm start &   # runs frontend, adjust if needed
+          echo "Waiting for Frontend..."
+          sleep 15
 
-      # Running ZAP against the running application (Assuming port 3000 for backend API)
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
         with:
-          target: 'http://localhost:3000'
+          target: 'http://localhost:5173'
           rules_file_name: '.zap/rules.tsv'
           cmd_options: '-a'
 
