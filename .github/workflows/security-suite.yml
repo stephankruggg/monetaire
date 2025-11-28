@@ -114,24 +114,22 @@ jobs:
       - name: Install and Start Backend
         run: |
           cd backend
-          npm install
           npm ci
-          npm run build --if-present
+          npm run build
+          mkdir -p data
           npm run migrate:latest
-          # Start backend in background
           npm start &
           echo "Waiting for Backend..."
-          sleep 15
+          sleep 5
       
       - name: Install and Start Frontend
         run: |
           cd frontend
-          npm install
           npm ci
-          npm run build --if-present
-          npm start &   # runs frontend, adjust if needed
+          npm run build &
+          npm run preview -- --port 5173 &
           echo "Waiting for Frontend..."
-          sleep 15
+          sleep 5
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
