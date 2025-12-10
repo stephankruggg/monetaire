@@ -35,7 +35,7 @@ async function loadMigrations(): Promise<Migration[]> {
 
 async function ensureMigrationsTable(): Promise<void> {
   const tableExists = await db.schema
-    .createTable('migrations')
+    .createTable('migrations' as any)
     .ifNotExists()
     .addColumn('name', 'text', (col) => col.primaryKey())
     .addColumn('executed_at', 'text', (col) => col.notNull())
@@ -44,7 +44,7 @@ async function ensureMigrationsTable(): Promise<void> {
 
 async function getExecutedMigrations(): Promise<string[]> {
   await ensureMigrationsTable();
-  const result = await db.selectFrom('migrations').select('name').execute();
+  const result = await db.selectFrom('migrations' as any).select('name').execute();
   return result.map((r) => r.name);
 }
 

@@ -104,17 +104,18 @@ export async function deleteImportSession(req: Request, res: Response): Promise<
 
     // Soft delete all expenses associated with this import session
     console.log('[ImportController] Soft deleting expenses for session:', sessionId);
-    const expensesResult = await db
-      .updateTable('expenses')
-      .set({
-        is_deleted: 1,
-        updated_at: new Date().toISOString(),
-      })
-      .where('import_session_id', '=', sessionId)
-      .where('is_deleted', '=', 0) // Only delete non-deleted expenses
-      .executeTakeFirst();
+        const expensesResult = await db
+          .updateTable('expenses')
+          .set({
+            is_deleted: 1,
+            updated_at: new Date().toISOString(),
+          })
+          .where('import_session_id', '=', sessionId)
+          .where('is_deleted', '=', 0) // Only delete non-deleted expenses
+          .execute();
 
-    const expensesDeleted = Number(expensesResult.numUpdatedRows || 0);
+    const normalizedExpenses = Array.isArray(expensesResult) ? expensesResult[0] : expensesResult;
+    const expensesDeleted = Number((normalizedExpenses as any)?.numUpdatedRows ?? (normalizedExpenses as any)?.numAffectedRows ?? 0);
     console.log('[ImportController] Soft deleted expenses:', expensesDeleted);
 
     // Soft delete the import session
